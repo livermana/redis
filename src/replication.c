@@ -233,9 +233,11 @@ void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
     }
 }
 
-void replicationFeedMonitors(redisClient *c, list *monitors, int dictid, robj **argv, int argc) {
-    listNode *ln;
-    listIter li;
+
+robj* createMonitorCommandObject(redisClient *c, int dictid, robj **argv, int argc)
+{
+    /*logic moved here from FeedMonitors as we don't need to create every command
+      if we are not going to send it out to a monitor*/
     int j;
     sds cmdrepr = sdsnew("+");
     robj *cmdobj;
@@ -264,14 +266,45 @@ void replicationFeedMonitors(redisClient *c, list *monitors, int dictid, robj **
     cmdrepr = sdscatlen(cmdrepr,"\r\n",2);
     cmdobj = createObject(REDIS_STRING,cmdrepr);
 
+   return cmdobj;
+
+}
+void replicationFeedMonitors(redisClient *c, list *monitors, int dictid, robj **argv, int argc) {
+    listNode *ln;
+    listIter li;
+
+    robj *cmdobj = NULL;
     listRewind(monitors,&li);
     while((ln = listNext(&li))) {
         redisClient *monitor = ln->value;
-        addReply(monitor,cmdobj);
-    }
-    decrRefCount(cmdobj);
-}
 
+	if(((monitor->flags & REDIS_WRITE_MONITOR) && (c->cmd->flags & REDIS_CMD_WRITE))||((monitor->flags & REDIS_READ_MONITOR) && !(c->cmd->flags & REDIS_CMD_WRITE)) )
+	{
+		/*if this is a write command and a write monitor, or a read command and a read monitor*/
+
+		if(cmdobj==NULL)
+		{
+		  /*only create the object if we actually need it*/
+		  cmdobj = createMonitorCommandObject(c,dictid,argv,argc);
+		}
+        	addReply(monitor,cmdobj);
+        }
+	else if((monitor->flags & REDIS_MONITOR) &&!(monitor->flags & REDIS_WRITE_MONITOR) &&!(monitor->flags & REDIS_READ_MONITOR) )
+	{
+		/*if this is a normal monitor command, read and write are shown*/
+		if(cmdobj==NULL)
+                {
+                  cmdobj = createMonitorCommandObject(c,dictid,argv,argc);
+		}
+
+		addReply(monitor,cmdobj);
+	}
+    }
+    if(cmdobj!=NULL)
+    {
+	decrRefCount(cmdobj);
+    }
+}
 /* Feed the slave 'c' with the replication backlog starting from the
  * specified 'offset' up to the end of the backlog. */
 long long addReplyReplicationBacklog(redisClient *c, long long offset) {

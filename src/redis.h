@@ -243,6 +243,8 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REDIS_PRE_PSYNC (1<<16)   /* Instance don't understand PSYNC. */
 #define REDIS_READONLY (1<<17)    /* Cluster client is in read-only state. */
 #define REDIS_PUBSUB (1<<18)      /* Client is in Pub/Sub mode. */
+#define REDIS_WRITE_MONITOR (1<<19) /*This client is a slave write monitor, see MONITOR*/
+#define REDIS_READ_MONITOR (1<<20)  /*This client is a slave read monitor, see MONITOR*/
 
 /* Client block type (btype field in client structure)
  * if REDIS_BLOCKED flag is set. */
@@ -1132,6 +1134,7 @@ ssize_t syncReadLine(int fd, char *ptr, ssize_t size, long long timeout);
 /* Replication */
 void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc);
 void replicationFeedMonitors(redisClient *c, list *monitors, int dictid, robj **argv, int argc);
+robj *createMonitorCommandObject(redisClient *c, int dictid, robj **argv, int argc);
 void updateSlavesWaitingBgsave(int bgsaveerr);
 void replicationCron(void);
 void replicationHandleMasterDisconnection(void);
