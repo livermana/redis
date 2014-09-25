@@ -3012,15 +3012,17 @@ void monitorCommand(redisClient *c) {
 
     c->flags |= (REDIS_SLAVE|REDIS_MONITOR);
 
-    if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"write")==0)
+    if(c->argc>1)
     {
-    	c->flags |= (REDIS_WRITE_MONITOR);
+    	if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"write")==0)
+    	{
+    		c->flags |= (REDIS_WRITE_MONITOR);
+    	}
+    	else if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"read")==0)
+    	{
+		c->flags |=(REDIS_READ_MONITOR);
+	}
     }
-    else if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"read")==0)
-    {
-	c->flags |=(REDIS_READ_MONITOR);
-    }
-
     listAddNodeTail(server.monitors,c);
     addReply(c,shared.ok);
 }
