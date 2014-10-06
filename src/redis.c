@@ -3012,13 +3012,13 @@ void monitorCommand(redisClient *c) {
 
     c->flags |= (REDIS_SLAVE|REDIS_MONITOR);
 
-    if(c->argc>1)
+    if(c->argc>1 && c->argv[1]!=NULL)
     {
-    	if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"write")==0)
+    	if(!strcasecmp(c->argv[1]->ptr,"write"))
     	{
-    		c->flags |= (REDIS_WRITE_MONITOR);
+		c->flags |= (REDIS_WRITE_MONITOR);
     	}
-    	else if(c->argv[1]!=NULL && strcasecmp(c->argv[1]->ptr,"read")==0)
+    	else if(!strcasecmp(c->argv[1]->ptr,"read"))
     	{
 		c->flags |=(REDIS_READ_MONITOR);
 	}
